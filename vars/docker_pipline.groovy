@@ -1,7 +1,10 @@
-def call(){
-    def dockerx = new org.iti.docker(this)
-    node('agent-1') {
-       
+// vars/docker_pipeline.groovy
+
+def call() {
+    pipeline {
+        agent {
+            label 'agent-1'
+        }
 
         tools {
             jdk "java-8"
@@ -13,20 +16,26 @@ def call(){
         }
 
         stages {
+            stage('Clean Workspace') {
+                steps {
+                    sh 'rm -rf java python'
+                }
+            }
+
             stage('Login to DockerHub') {
                 steps {
-                    script {
-                        dockerx.login(env.DOCKER_USER, env.DOCKER_PASS)
-                    }
+                    sh """
+                        echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
+                    """
                 }
             }
 
             stage('Clone Repositories') {
                 steps {
-                    script {
-                        dockerx.gitClone('https://github.com/kamelmostafa21/java.git', 'master', 'java')
-                        dockerx.gitClone('https://github.com/kamelmostafa21/python-sample-vscode-flask-tutorial.git', 'main', 'python')
-                    }
+                    sh '''
+                        git clone -b master https://github.com/kamelmostafa21/java.git java
+                        git clone -b main https://github.com/kamelmostafa21/python-sample-vscode-flask-tutorial.git python
+                    '''
                 }
             }
 
@@ -34,25 +43,28 @@ def call(){
                 parallel {
                     stage('Java Image') {
                         steps {
-                            script {
-                                dockerx.buildJava('kamelmostafa/java-app', 'latest')
-                                dockerx.push('kamelmostafa/java-app', 'latest')
+                            dir('java') {
+                                sh '''
+                                    mvn clean package -DskipTests
+                                    docker build -t kamelmostafa/java-app .
+                                    docker push kamelmostafa/java-app:latest
+                                '''
                             }
                         }
                     }
 
                     stage('Python Image') {
                         steps {
-                            
-                            script {
-                                dockerx.buildPython('kamelmostafa/python-app', 'latest')
-                                dockerx.push('kamelmostafa/python-app', 'latest')
+                            dir('python') {
+                                sh '''
+                                    docker build -t kamelmostafa/python-app .
+                                    docker push kamelmostafa/python-app:latest
+                                '''
                             }
-                            
                         }
                     }
                 }
             }
         }
     }
-    }
+}
