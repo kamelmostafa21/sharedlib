@@ -20,5 +20,9 @@ def buildJava(IMAGE_NAME, IMAGE_TAG){
         sh "mvn clean package install -Dmaven.test.skip=true"
         sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
     }
-    
-} 
+}
+
+def gitClone(String repoUrl, String branch = 'main', String targetDir = '.') {
+    sh "rm -rf ${targetDir}"
+    sh "git clone --branch ${branch} ${repoUrl} ${targetDir}"
+}
