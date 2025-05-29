@@ -1,5 +1,5 @@
 def call(){
-    def dockerx = new org.iti.docker()
+    def dockerx = new org.iti.docker(this)
     node('agent-1') {
        
 
